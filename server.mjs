@@ -55,8 +55,8 @@ Shops.init({
 });
 Shops.sync()
 
-class Drugs extends Model {}
-Drugs.init({
+class Meds extends Model {}
+Meds.init({
   id: {
     type: DataTypes.BIGINT,
     allowNull: false,
@@ -80,7 +80,7 @@ Drugs.init({
   },
   img: {
     type: DataTypes.BLOB,
-    allowNull: false
+    allowNull: true
   },
   favorite: {
     type: DataTypes.BOOLEAN,
@@ -90,10 +90,10 @@ Drugs.init({
    sequelize,
    createdAt: false,
    updatedAt: false,
-   modelName: 'Drugs'
+   modelName: 'Meds'
 });
 const imageBinary = fs.readFileSync('./img/pills.png');
-await Drugs.update(
+await Meds.update(
   { img: imageBinary},
   {
        where: {
@@ -101,7 +101,7 @@ await Drugs.update(
     },
    },
 );
-Drugs.sync()
+Meds.sync()
 
 class Customers extends Model {}
 Customers.init({
@@ -165,14 +165,14 @@ Cart.init({
 });
 Cart.sync()
 
-class DrugsToShops extends Model {}
-DrugsToShops.init({
+class MedsToShops extends Model {}
+MedsToShops.init({
   id: {
     type: DataTypes.BIGINT,
     allowNull: false,
     primaryKey: true
   },
-  drugId: {
+  med_Id: {
     type: DataTypes.BIGINT,
     allowNull: false,
   },
@@ -184,9 +184,9 @@ DrugsToShops.init({
    sequelize,
    createdAt: false,
    updatedAt: false,
-   modelName: 'DrugsToShops'
+   modelName: 'MedsToShops'
 });
-DrugsToShops.sync()
+MedsToShops.sync()
 
 class Orders extends Model {}
 Orders.init({
@@ -234,6 +234,7 @@ Orders.init({
    modelName: 'Orders'
 });
 Orders.sync()
+
 class Coupons extends Model {}
 Coupons.init({
   id: {
@@ -260,17 +261,16 @@ Coupons.init({
    modelName: 'Coupons'
 });
 Coupons.sync()
-// Shops.belongsToMany(Drugs, { through: 'DrugsToShops' });
+// Shops.belongsToMany(Meds, { through: 'MedsToShops' });
 await sequelize.sync();
 console.log("All models were synchronized successfully.");
 
 
-
 app.get('/', async (req, res) => {
   let shops =  await Shops.findAll();
-  let drugs =  await Drugs.findAll();
-  let drugsShops = await DrugsToShops.findAll();
-  res.status(200).send({shops, drugs, drugsShops})
+  let meds =  await Meds.findAll();
+  let medsShops = await MedsToShops.findAll();
+  res.status(200).send({shops, meds, medsShops})
 }) 
 app.get('/cart', async (req, res) => {
   let cart =  await Cart.findAll();
@@ -298,7 +298,6 @@ app.put('/cart', async (req, res) => {
     await Cart.destroy({
       where: { id }
     });
-    // return res.status(200).send('Item removed from cart');
   } else {
     await Cart.update(
       {quantity: req.body.quantity},
@@ -315,7 +314,6 @@ app.delete('/cart', async (req, res) => {
 })
 app.get('/orders', async (req, res) => {
   let orders = await Orders.findAll();
-  // console.log('All orders:', orders);
  res.status(200).send(orders)
 }) 
 app.post('/orders', async (req, res) => {
@@ -323,21 +321,21 @@ app.post('/orders', async (req, res) => {
   if(maxIdCustomers === null) {
     maxIdCustomers = 0
   }
-  let newCustomer =  await Customers.create({ id: maxIdCustomers+1, name: req.body.name, email: req.body.email, phone:req.body.phone, adress: req.body.adress, });
+  let newCustomer =  await Customers.create({ id: maxIdCustomers+1, name: req.body.name, email: req.body.email, phone:req.body.phone, adress: req.body.adress });
   await newCustomer.save();
-console.log(newCustomer);
+
   let maxIdOrders = await Orders.max('id')
   if(maxIdOrders === null) {
     maxIdOrders = 0
   }
-  let totalCost = req.body.totalCost.toFixed(2)
+  let totalCost = req.body.totalCost;
   let newOrder =  await Orders.create({ id:maxIdOrders+1, customerId:maxIdCustomers+1, customerName: req.body.name, customerEmail:req.body.email, customerPhone:req.body.phone, customerAdress:req.body.adress, deliveryType:req.body.deliveryType, totalCost, order:req.body.order});
   await newOrder.save();
 })
 app.put('/favorite', async (req, res) => {
-  const drugToChange = await Drugs.findByPk(req.body.id);
-  const newFavorite = !drugToChange.dataValues.favorite;
-  await Drugs.update(
+  const medToChange = await Meds.findByPk(req.body.id);
+  const newFavorite = !medToChange.dataValues.favorite;
+  await Meds.update(
     {favorite: newFavorite},
     {
     where: {
@@ -347,11 +345,9 @@ app.put('/favorite', async (req, res) => {
 })
 app.get('/coupons', async (req, res) => {
   let coupons =  await Coupons.findAll();
-  // console.log(coupons);
  res.status(200).send(coupons)
 }) 
 app.put('/coupons', async (req, res) => {
-  // let coupons =  await Coupons.findAll();
   const couponToChange = await Coupons.findByPk(req.body.id);
   const newValue = !couponToChange.copied;
   await Coupons.update(
@@ -361,8 +357,6 @@ app.put('/coupons', async (req, res) => {
       id: req.body.id
     }
   });
-  // console.log(couponToChange);
-//  res.status(200).send(coupons)
 }) 
 // app.get('/api/skills/:id', async (req, res) => {
 //   let selectedSkill =  await Skills.findOne({ where: { id: `${req.params.id}` } });
